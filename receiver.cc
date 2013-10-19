@@ -7,6 +7,7 @@
 #include "socket.hh"
 
 const int BUFSIZE = 1024;
+const std::string LOCALHOST = "127.0.0.1";
 
 int main(int argc, char *argv[]) {
 
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
    try
    {
         Socket sock(UDP); 
-	Address rcvaddr("127.0.0.1", myatoi(argv[1]));
+	Address rcvaddr(LOCALHOST, myatoi(argv[1]));
         sock.bind(rcvaddr);
 
         std::cout << "Waiting for data..." << std::endl;
