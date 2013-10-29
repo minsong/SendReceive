@@ -1,19 +1,19 @@
 AM_CXXFLAGS = $(PICKY_CXXFLAGS)
 
-bin_PROGRAMS = receiver sender 
-receiver_SOURCES = exception.hh ezio.cc ezio.hh \
+bin_PROGRAMS = server client 
+server_SOURCES = exception.hh ezio.cc ezio.hh \
 	socket.cc socket.hh address.cc address.hh \
-	socket_type.hh receiver.cc
-receiver_LDADD = -lrt
-receiver_LDFLAGS = -pthread
-sender_SOURCES = exception.hh ezio.cc ezio.hh \
+	socket_type.hh server.cc server.hh
+server_LDADD = -lrt
+server_LDFLAGS = -pthread
+client_SOURCES = exception.hh ezio.cc ezio.hh \
 	socket.cc socket.hh address.cc address.hh \
-	socket_type.hh sender.cc
-sender_LDADD = -lrt
-sender_LDFLAGS = -pthread
+	socket_type.hh client.cc client.hh
+client_LDADD = -lrt
+client_LDFLAGS = -pthread
 
 install-exec-hook:
-	chown root $(DESTDIR)$(bindir)/receiver
-	chmod u+s $(DESTDIR)$(bindir)/receiver
-	chown root $(DESTDIR)$(bindir)/sender
-	chmod u+s $(DESTDIR)$(bindir)/sender
+	chown root $(DESTDIR)$(bindir)/server
+	chmod u+s $(DESTDIR)$(bindir)/server
+	chown root $(DESTDIR)$(bindir)/client
+	chmod u+s $(DESTDIR)$(bindir)/client
