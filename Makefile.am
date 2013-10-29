@@ -11,9 +11,3 @@ client_SOURCES = exception.hh ezio.cc ezio.hh \
 	socket_type.hh client.cc client.hh
 client_LDADD = -lrt
 client_LDFLAGS = -pthread
-
-install-exec-hook:
-	chown root $(DESTDIR)$(bindir)/server
-	chmod u+s $(DESTDIR)$(bindir)/server
-	chown root $(DESTDIR)$(bindir)/client
-	chmod u+s $(DESTDIR)$(bindir)/client
