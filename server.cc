@@ -10,7 +10,7 @@
 const int BUFSIZE = 1024;
 
 Server::Server( uint16_t portNumber )
-: port(portNumber), addr("localhost", portNumber), sock(UDP)
+: port(portNumber), addr("127.0.0.1", portNumber), sock(UDP)
 {
    std::cout << "Port number: " << port << std::endl;
    sock.bind(addr);
