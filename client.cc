@@ -1,41 +1,43 @@
 #include <iostream>
-#include <stdlib.h>
 
 #include "socket.hh"
 #include "client.hh"
 
+using namespace std;
 
-Client::Client(std::string ipAddress, uint16_t portNumber)
+Client::Client(string ipAddress, uint16_t portNumber)
 : port(portNumber), addr(ipAddress, portNumber), sock(UDP)
 {
-    std::cout << "New client" << std::endl;
+    cout << "-- New Client --" << endl;
 }
 
 void Client::run()
 {
-	sock.sendto(addr, "Hello");
+    sock.sendto(addr, "Hello from Client");
 	while (true)
 	{
-  		std::pair<Address, std::string> rcvd = sock.recvfrom();
-    	std::cout << "Sender: " << rcvd.first.str() << std::endl;
-        std::cout << "Payload: " << rcvd.second << std::endl;
-		usleep(1000);
+  		pair<Address, string> rcvd = sock.recvfrom();
+    	cout << "Client received message '" << rcvd.second << "' from " << rcvd.first.str() << endl << endl;
+		usleep(999999);
+		sock.sendto(rcvd.first, "Hello from Client");
 	} 
 }
 
-int main(int argc, char *argv[]) {
-   
-   if (argc != 3)
+int main(int argc, char *argv[])
+{
+	if (argc != 3)
 	{
-   		Client clt;
-		/* std::cerr << "Usage: receiver <port>" << std::endl;
-		    exit(1);*/
-		clt.run();
-   	}
-	else
-   	{
+		cerr << "Usage: client <ip address> <port>" << endl;
+		exit(1);
+	}
+	try
+   	{ 
    		Client clt(argv[1],myatoi(argv[2]));
 		clt.run();
-   	}
-
+	}
+    catch (const Exception & e)
+    {
+        e.perror();
+		return EXIT_FAILURE;
+    }
 }

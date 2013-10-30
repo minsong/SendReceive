@@ -9,47 +9,47 @@
 
 const int BUFSIZE = 1024;
 
+using namespace std;
+
 Server::Server( uint16_t portNumber )
 : port(portNumber), addr("127.0.0.1", portNumber), sock(UDP)
 {
-   std::cout << "Port number: " << port << std::endl;
-   sock.bind(addr);
+	try
+   	{
+		sock.bind(addr);
+	}
+    catch (const Exception & e)
+    {
+        e.perror();
+		exit(1);
+    }
+	cout << "Server port number: " << port << endl;
 }
 
 void Server::run()
 {
-	while (true)
-	{
-  		std::pair<Address, std::string> rcvd = sock.recvfrom();
-    	std::cout << "Sender: " << rcvd.first.str() << std::endl;
-        std::cout << "Payload: " << rcvd.second << std::endl;
-	} 
+   while (true)
+   {
+      pair<Address, string> rcvd = sock.recvfrom();
+    	cout << "Server received message '" << rcvd.second << "' from " << rcvd.first.str() << endl << endl;
+	  sock.sendto(rcvd.first, "Hello from Server");
+   } 
 }
 
-int main(int argc, char *argv[]) {
-
+int main(int argc, char *argv[]) 
+{
+	if (argc != 2)
+	{
+		cerr << "Usage: server <port>" << endl;
+		exit(2);
+	}
 	try
-   	{ 	
-		if (argc != 2)
-		{
-			//for testing
-			Server svr;
-			svr.run();
-		
-			/* std::cerr << "Usage: receiver <port>" << std::endl;
-			   exit(1);*/
-
-	   	}
-	  	else
-	   	{
-			Server svr(myatoi(argv[1]));
-			svr.run();
-	   	}	
-   	}
-
+   	{ 
+		Server svr(myatoi(argv[1]));
+		svr.run();
+	}
     catch (const Exception & e)
     {
-		std::cout << "--error--" << std::endl;
         e.perror();
 		return EXIT_FAILURE;
     }

@@ -3,14 +3,14 @@
 
 class Server
 {
-public:
-	Server( uint16_t portNumber = 1500 );
-	void run();
+	public:
+		Server( uint16_t portNumber = 1500 );
+		void run();
 
-private:
-	uint16_t port;
-	Address addr;
-	Socket sock;
+	private:
+		uint16_t port;
+		Address addr;
+		Socket sock;
 };
 
 
