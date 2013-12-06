@@ -24,7 +24,7 @@ Address::Address( const sockaddr & s_addr )
     if ( s_addr.sa_family != AF_INET ) {
         throw Exception( "Address()", "sockaddr is not of family AF_INET" );
     }
-
+    
     addr_ = *reinterpret_cast<const sockaddr_in *>( &s_addr );
 }
 

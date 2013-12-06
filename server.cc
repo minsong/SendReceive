@@ -21,15 +21,14 @@ Server::Server( const uint16_t portNumber )
 
 void Server::run( void ){
   while (true) {
-    pair<Address, string> rcvd = sock.recvfrom();
-    Packet received_packet( rcvd.first, rcvd.second );
+    Packet received_packet = sock.recv();
     
     cout << "Server received message '" << received_packet.payload();
     cout << "' sent at " << received_packet.send_timestamp();
     cout << " from " << received_packet.addr().str() << endl;
     
     Packet send_packet( received_packet.addr(), 0 , 0, "ACK" );
-    sock.sendto( send_packet.addr(), send_packet.str() );
+    sock.send(send_packet);
   } 
 }
 

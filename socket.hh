@@ -12,6 +12,7 @@
 #include "address.hh"
 #include "file_descriptor.hh"
 #include "socket_type.hh"
+#include "packet.hh"
 
 class Socket
 {
@@ -40,6 +41,12 @@ public:
 
     std::pair< Address, std::string > recvfrom( void );
     void sendto( const Address & destination, const std::string & payload );
+
+    /* Send packet */
+    void send( Packet & packet );
+
+    /* Receive a packet */
+    Packet recv( void );
 };
 
 #endif

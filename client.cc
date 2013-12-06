@@ -16,11 +16,11 @@ void Client::run( void ){
   Packet send_packet( addr , 0 , 0, "Hello from Client" );
   
   while ( true ) {
-    send_packet.set_timestamp();
-    sock.sendto( send_packet.addr(), send_packet.str() );
-    
-    pair<Address, string> rcvd = sock.recvfrom();
-    Packet received_packet( rcvd.first, rcvd.second );
+    //send_packet.set_timestamp();
+    //sock.sendto( send_packet.addr(), send_packet.str() );
+    sock.send(send_packet);
+
+    Packet received_packet = sock.recv();
     
     cout << "Client received message '" << received_packet.payload();
     cout << "' from " << received_packet.addr().str() << endl;

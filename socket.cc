@@ -4,11 +4,13 @@
 #include <netinet/in.h>
 #include <utility>
 #include <arpa/inet.h>
+#include <cassert>
 
 #include "socket.hh"
 #include "exception.hh"
 #include "address.hh"
 #include "ezio.hh"
+#include "packet.hh"
 
 using namespace std;
 
@@ -137,4 +139,70 @@ void Socket::sendto( const Address & destination, const std::string & payload )
                    sizeof( destination.raw_sockaddr() ) ) < 0 ) {
         throw Exception( "sendto" );
     }
+}
+
+/* Send packet */
+void Socket::send( Packet & packet )
+{
+    packet.set_timestamp();
+    string payload( packet.str() );
+    
+    ssize_t bytes_sent = ::sendto( fd_.num(), payload.data(),
+                                   payload.size(), 0,
+                                   (sockaddr *)&packet.addr().raw_sockaddr(),
+                                   sizeof( packet.addr().raw_sockaddr() ) );
+    
+    if ( bytes_sent != static_cast<ssize_t>( payload.size() ) ) {
+        throw Exception( "sendto error" );
+  }
+}
+
+/* Receive a packet and associated timestamp */
+Packet Socket::recv( void )
+{
+  static const int RECEIVE_MTU = 2048;
+
+  /* receive source address, timestamp, and payload in msghdr structure */
+  struct sockaddr_in packet_remote_addr;
+  struct msghdr header;
+  struct iovec msg_iovec;
+
+  char msg_payload[ RECEIVE_MTU ];
+  char msg_control[ RECEIVE_MTU ];
+
+  /* receive source address */
+  header.msg_name = &packet_remote_addr;
+  header.msg_namelen = sizeof( packet_remote_addr );
+
+  /* receive payload */
+  msg_iovec.iov_base = msg_payload;
+  msg_iovec.iov_len = RECEIVE_MTU;
+  header.msg_iov = &msg_iovec;
+  header.msg_iovlen = 1;
+
+  /* receive timestamp */
+  header.msg_control = msg_control;
+  header.msg_controllen = RECEIVE_MTU;
+
+  /* receive flags */
+  header.msg_flags = 0;
+
+  ssize_t received_len = recvmsg( fd_.num(), &header, 0 );
+
+  if ( received_len < 0 ) {
+    throw Exception( "recvmsg" );
+  }
+
+  if ( header.msg_flags & MSG_TRUNC ) {
+    throw Exception( "Received oversize datagram" );
+  }
+
+  /*TODO: verify presence of timestamp */
+  /* struct cmsghdr *ts_hdr = CMSG_FIRSTHDR( &header );
+  assert( ts_hdr );
+  assert( ts_hdr->cmsg_level == SOL_SOCKET );
+  assert( ts_hdr->cmsg_type == SO_TIMESTAMPNS );*/
+
+  return Packet( Address( packet_remote_addr ),
+                 string( msg_payload, received_len ) );
 }
