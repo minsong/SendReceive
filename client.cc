@@ -7,7 +7,7 @@
 using namespace std;
 
 Client::Client( const string ipAddress, const uint16_t portNumber )
-  : port(portNumber), addr(ipAddress, portNumber), sock(UDP)
+  : port( portNumber ), addr( ipAddress, portNumber ), sock( UDP )
 {
   cout << "-- New Client --" << endl;
 }
@@ -18,26 +18,31 @@ void Client::run( void ){
   while ( true ) {
     //send_packet.set_timestamp();
     //sock.sendto( send_packet.addr(), send_packet.str() );
-    sock.send(send_packet);
+    sock.send( send_packet );
 
     Packet received_packet = sock.recv();
     
     cout << "Client received message '" << received_packet.payload();
     cout << "' from " << received_packet.addr().str() << endl;
     
-    usleep(999999);
+    usleep( 999999 );
   } 
 }
 
 int main( int argc, char *argv[] ) {
-  if (argc != 3){
-    cerr << "Usage: client <ip address> <port>" << endl;
-    return EXIT_FAILURE;
-  }
   try { 
-    Client clt(argv[1],myatoi(argv[2]));
+    /* Truly paranoid check */
+    if ( argc <= 0 ) {
+      throw Exception( "client", "Missing argv[ 0 ]" );
+    }
+    /* Check arguments */
+    if ( argc != 3 ){
+      throw Exception( argv[0] , "DEST_ADDRESS DEST_PORT" );
+      return EXIT_FAILURE;
+    }
+    Client clt( argv[1], myatoi( argv[2] ) );
     clt.run();
-  } catch (const Exception & e) {
+  } catch ( const Exception & e ) {
     e.perror();
     return EXIT_FAILURE;
   }
