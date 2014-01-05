@@ -3,8 +3,10 @@
 #include "socket.hh"
 #include "client.hh"
 #include "packet.hh"
+#include "poller.hh"
 
 using namespace std;
+using namespace PollerShortNames;
 
 Client::Client( const string ipAddress, const uint16_t portNumber )
   : port( portNumber ), addr( ipAddress, portNumber ), sock( UDP )
@@ -15,6 +17,9 @@ Client::Client( const string ipAddress, const uint16_t portNumber )
 void Client::run( void ){
   Packet send_packet( addr , 0 , 0, "Hello from Client" );
   
+  /* Set up the events that we care about */
+  Poller poller;
+
   while ( true ) {
     //send_packet.set_timestamp();
     //sock.sendto( send_packet.addr(), send_packet.str() );
