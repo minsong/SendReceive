@@ -24,10 +24,11 @@ void Server::run( void ){
     Packet received_packet = sock.recv();
     
     cout << "Server received message '" << received_packet.payload();
-    cout << "' sent at " << received_packet.send_timestamp();
+    cout << "' with seqnum " << received_packet.sequence_number();
+    cout << " sent at " << received_packet.send_timestamp();
     cout << " from " << received_packet.addr().str() << endl;
     
-    Packet send_packet( received_packet.addr(), 0 , 0, "ACK" );
+    Packet send_packet( received_packet.addr(), 0 , received_packet.sequence_number()+1, "ACK" );
     sock.send( send_packet );
   } 
 }

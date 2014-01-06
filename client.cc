@@ -14,22 +14,38 @@ Client::Client( const string ipAddress, const uint16_t portNumber )
   cout << "-- New Client --" << endl;
 }
 
-void Client::run( void ){
-  Packet send_packet( addr , 0 , 0, "Hello from Client" );
-  
+void Client::run( void ){  
   /* Set up the events that we care about */
   Poller poller;
+
+  uint16_t cwnd = 5;
+  uint16_t base = 0;
+  uint16_t next_seqnum = 0; 
 
   while ( true ) {
     //send_packet.set_timestamp();
     //sock.sendto( send_packet.addr(), send_packet.str() );
-    sock.send( send_packet );
+
+    cout << "--Base is " << base << "--" << endl;
+
+    /* Send packets up to available window size */
+    while ( next_seqnum < base + cwnd ) {
+      Packet send_packet( addr , next_seqnum, 0, "Hello from Client" );
+
+      cout << "-- Sending Packet with seqnum " << next_seqnum << "--" << endl; 
+      sock.send( send_packet );
+      
+      next_seqnum++;
+    }
+
 
     Packet received_packet = sock.recv();
-    
     cout << "Client received message '" << received_packet.payload();
-    cout << "' from " << received_packet.addr().str() << endl;
+    cout << "' with acknum " << received_packet.ack_number();
+    cout << " from " << received_packet.addr().str() << endl;
     
+    base = received_packet.ack_number();
+
     usleep( 999999 );
   } 
 }
