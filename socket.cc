@@ -4,18 +4,18 @@
 #include <netinet/in.h>
 #include <utility>
 #include <arpa/inet.h>
+#include <linux/netfilter_ipv4.h>
 #include <cassert>
 
 #include "socket.hh"
 #include "exception.hh"
 #include "address.hh"
 #include "ezio.hh"
-#include "packet.hh"
 
 using namespace std;
 
 Socket::Socket( const SocketType & socket_type )
-    : fd_( socket( AF_INET, socket_type, 0 ), "socket" ),
+    : fd_( SystemCall( "socket", socket( AF_INET, socket_type, 0 ) ) ),
       local_addr_(),
       peer_addr_()
 {
@@ -34,21 +34,17 @@ void Socket::bind( const Address & addr )
     local_addr_ = addr;
  
     /* bind the socket to listen_addr */
-    if ( ::bind( fd_.num(),
-                 &local_addr_.raw_sockaddr(),
-                 sizeof( local_addr_.raw_sockaddr() ) ) < 0 ) {
-        throw Exception( "bind" );
-    }
+    SystemCall( "bind", ::bind( fd_.num(),
+                                &local_addr_.raw_sockaddr(),
+                                sizeof( local_addr_.raw_sockaddr() ) ) );
 
     /* set local_addr to the address we actually were bound to */
     sockaddr_in new_local_addr;
     socklen_t new_local_addr_len = sizeof( new_local_addr );
 
-    if ( ::getsockname( fd_.num(),
-                        reinterpret_cast<sockaddr *>( &new_local_addr ),
-                        &new_local_addr_len ) < 0 ) {
-        throw Exception( "getsockname" );
-    }
+    SystemCall( "getsockname", ::getsockname( fd_.num(),
+                                              reinterpret_cast<sockaddr *>( &new_local_addr ),
+                                              &new_local_addr_len ) );
 
     local_addr_ = Address( new_local_addr );
 }
@@ -57,9 +53,7 @@ static const int listen_backlog_ = 16;
 
 void Socket::listen( void )
 {
-  if ( ::listen( fd_.num(), listen_backlog_ ) < 0 ) {
-    throw Exception( "listen" );
-  }
+    SystemCall( "listen", ::listen( fd_.num(), listen_backlog_ ) );
 }
 
 Socket Socket::accept( void )
@@ -69,9 +63,10 @@ Socket Socket::accept( void )
   socklen_t new_connection_addr_size = sizeof( new_connection_addr );
 
   /* wait for client connection */
-  FileDescriptor new_fd( ::accept( fd_.num(),
-                         reinterpret_cast<sockaddr *>( &new_connection_addr ),
-                         &new_connection_addr_size ), "accept" );
+  FileDescriptor new_fd( SystemCall( "accept",
+                                     ::accept( fd_.num(),
+                                               reinterpret_cast<sockaddr *>( &new_connection_addr ),
+                                               &new_connection_addr_size ) ) );
 
   // verify length is what we expected 
   if ( new_connection_addr_size != sizeof( new_connection_addr ) ) {
@@ -86,20 +81,29 @@ string Socket::read( void )
     return fd_.read();
 }
 
+string Socket::read ( const size_t limit )
+{
+    return fd_.read( limit );
+}
+
 void Socket::connect( const Address & addr )
 {
     peer_addr_ = addr;
 
-    if ( ::connect( fd_.num(),
-                    &peer_addr_.raw_sockaddr(),
-                    sizeof( peer_addr_.raw_sockaddr() ) ) < 0 ) {
-        throw Exception( "connect" );
-    }
+    SystemCall( "connect", ::connect( fd_.num(),
+                                      &peer_addr_.raw_sockaddr(),
+                                      sizeof( peer_addr_.raw_sockaddr() ) ) );
 }
 
-void Socket::write( const std::string & str )
+void Socket::write( const string & str )
 {
     fd_.write( str );
+}
+
+string::const_iterator Socket::write_some( const string::const_iterator & begin,
+                                           const string::const_iterator & end )
+{
+    return fd_.write_some( begin, end );
 }
 
 pair< Address, string > Socket::recvfrom( void )
@@ -129,16 +133,29 @@ pair< Address, string > Socket::recvfrom( void )
                       string( buf, recv_len ) );
 }
 
-void Socket::sendto( const Address & destination, const std::string & payload )
+void Socket::sendto( const Address & destination, const string & payload )
 {
-    if ( ::sendto( fd_.num(),
-                   payload.data(),
-                   payload.size(),
-                   0,
-                   &destination.raw_sockaddr(),
-                   sizeof( destination.raw_sockaddr() ) ) < 0 ) {
-        throw Exception( "sendto" );
-    }
+    SystemCall( "sendto", ::sendto( fd_.num(),
+                                    payload.data(),
+                                    payload.size(),
+                                    0,
+                                    &destination.raw_sockaddr(),
+                                    sizeof( destination.raw_sockaddr() ) ) );
+}
+
+void Socket::getsockopt( const int level, const int optname,
+                        void *optval, socklen_t *optlen ) const
+{
+    SystemCall( "getsockopt", ::getsockopt( const_cast<FileDescriptor &>( fd_ ).num(), level, optname, optval, optlen ) );
+}
+
+Address Socket::original_dest( void ) const
+{
+    sockaddr_in dstaddr;
+    socklen_t destlen = sizeof( dstaddr );
+    getsockopt( SOL_IP, SO_ORIGINAL_DST, &dstaddr, &destlen );
+    assert( destlen == sizeof( dstaddr ) );
+    return dstaddr;
 }
 
 /* Send packet */

@@ -1,10 +1,10 @@
+/* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
 #ifndef TIMESTAMP_HH
 #define TIMESTAMP_HH
 
-namespace Network {
-  /* Current time in milliseconds since the epoch */
-  uint64_t timestamp( void );
+#include <cstdint>
 
-  uint64_t timestamp( const struct timespec & ts );
-}
-#endif
+uint64_t timestamp( void );
+
+#endif /* TIMESTAMP_HH */

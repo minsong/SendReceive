@@ -13,24 +13,19 @@ class FileDescriptor
 {
 private:
     int fd_;
+    bool eof_;
 
 public:
-    FileDescriptor( const int s_fd, const std::string & syscall_name )
-        : fd_( s_fd )
+    FileDescriptor( const int s_fd )
+    : fd_( s_fd ), eof_( false )
     {
-        if ( fd_ < 0 ) {
-            throw Exception( syscall_name );
-        }
-
         if ( fd_ <= 2 ) { /* make sure not overwriting stdout/stderr */
             throw Exception( "FileDescriptor", "fd <= 2" );
         }
 
         /* set close-on-exec flag so our file descriptors
            aren't passed on to unrelated children (like a shell) */
-        if ( fcntl( fd_, F_SETFD, FD_CLOEXEC ) < 0 ) {
-            throw Exception( "fcntl FD_CLOEXEC" );
-        }
+        SystemCall( "fcntl FD_CLOEXEC", fcntl( fd_, F_SETFD, FD_CLOEXEC ) );
     }
 
     ~FileDescriptor()
@@ -39,12 +34,11 @@ public:
             return;
         }
 
-        if ( close( fd_ ) < 0 ) {
-            throw Exception( "close" );
-        }
+        SystemCall( "close", close( fd_ ) );
     }
 
     const int & num( void ) { return fd_; }
+    const bool & eof( void ) const { return eof_; }
 
     /* forbid copying FileDescriptor objects or assigning them */
     FileDescriptor( const FileDescriptor & other ) = delete;
@@ -52,7 +46,7 @@ public:
 
     /* allow moving FileDescriptor objects */
     FileDescriptor( FileDescriptor && other )
-        : fd_( other.fd_ )
+    : fd_( other.fd_ ), eof_( other.eof_ )
     {
         other.fd_ = -1; /* disable the other FileDescriptor */
     }
@@ -62,15 +56,26 @@ public:
         writeall( num(), buffer );
     }
 
+    std::string::const_iterator write_some( const std::string::const_iterator & begin,
+                                            const std::string::const_iterator & end )
+    {
+        return ::write_some( num(), begin, end );
+    }
+
     std::string read( void )
     {
-        return readall( num() );
+        auto ret = readall( num() );
+        if ( ret.empty() ) { eof_ = true; }
+        return ret;
     }
 
     std::string read( const size_t limit )
     {
-        return readall( num(), limit );
+        auto ret = readall( num(), limit );
+        if ( ret.empty() ) { eof_ = true; }
+        return ret;
     }
 };
 
 #endif /* FILE_DESCRIPTOR_HH */
+

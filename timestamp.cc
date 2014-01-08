@@ -1,37 +1,24 @@
-#include <time.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string>
+/* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
+#include <ctime>
 
 #include "timestamp.hh"
+#include "exception.hh"
 
-using namespace std;
-using namespace Network;
-
-/* nanoseconds per millisecond */
-static const uint64_t MILLION = 1000000;
-
-/* nanoseconds per second */
-static const uint64_t BILLION = 1000 * MILLION;
-
-/* 6.829 epoch */
-static const uint64_t EPOCH = 1362700000000;
-
-/* Current time in milliseconds since the epoch */
-uint64_t Network::timestamp( void )
+static uint64_t timestamp_internal( void )
 {
-  struct timespec ts;
-  
-  if ( clock_gettime( CLOCK_REALTIME, &ts ) < 0 ) {
-    perror( "clock_gettime" );
-    throw string( "clock_gettime error" );
-  }
-  
-  return timestamp( ts );
+    timespec ts;
+    SystemCall( "clock_gettime", clock_gettime( CLOCK_REALTIME, &ts ) );
+
+    uint64_t millis = ts.tv_nsec / 1000000;
+    millis += uint64_t( ts.tv_sec ) * 1000;
+
+    return millis;
 }
 
-uint64_t Network::timestamp( const struct timespec & ts )
+uint64_t timestamp( void )
 {
-  const uint64_t nanos = ts.tv_sec * BILLION + ts.tv_nsec;
-  return nanos / MILLION - EPOCH;
+    static uint64_t first_timestamp = timestamp_internal();
+
+    return timestamp_internal() - first_timestamp;
 }

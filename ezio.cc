@@ -1,6 +1,7 @@
 /* -*-mode:c++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 #include <unistd.h>
+#include <cassert>
 
 #include "ezio.hh"
 #include "exception.hh"
@@ -10,24 +11,35 @@ using namespace std;
 /* blocking write of entire buffer */
 void writeall( const int fd, const string & buf )
 {
-    size_t total_bytes_written = 0;
+    auto it = buf.begin();
 
-    while ( total_bytes_written < buf.size() ) {
-        ssize_t bytes_written = write( fd,
-                                       buf.data() + total_bytes_written,
-                                       buf.size() - total_bytes_written );
-
-        if ( bytes_written < 0 ) {
-            throw Exception( "write" );
-        } else {
-            total_bytes_written += bytes_written;
-        }
+    while ( it != buf.end() ) {
+        it = write_some( fd, it, buf.end() );
     }
 }
 
-std::string readall( const int fd, const size_t limit )
+string::const_iterator write_some( const int fd,
+                                   const string::const_iterator & begin,
+                                   const string::const_iterator & end )
 {
-    static char buffer[ ezio::read_chunk_size ];
+    assert( end > begin );
+
+    ssize_t bytes_written = write( fd, &*begin, end - begin );
+
+    if ( bytes_written < 0 ) {
+        throw Exception( "write" );
+    } else if ( bytes_written == 0 ) {
+        throw Exception( "write returned 0" );
+    }
+
+    return begin + bytes_written;
+}
+
+string readall( const int fd, const size_t limit )
+{
+    char buffer[ ezio::read_chunk_size ];
+
+    assert( limit > 0 );
 
     ssize_t bytes_read = read( fd, &buffer, min( ezio::read_chunk_size, limit ) );
 
@@ -42,7 +54,7 @@ std::string readall( const int fd, const size_t limit )
     }
 }
 
-long int myatoi( const string & str )
+long int myatoi( const string & str, const int base )
 {
     if ( str.empty() ) {
         throw Exception( "Invalid integer string", "empty" );
@@ -51,12 +63,12 @@ long int myatoi( const string & str )
     char *end;
 
     errno = 0;
-    long int ret = strtol( str.c_str(), &end, 10 );
+    long int ret = strtol( str.c_str(), &end, base );
 
     if ( errno != 0 ) {
         throw Exception( "strtol" );
     } else if ( end != str.c_str() + str.size() ) {
-        throw Exception( "Invalid decimal integer", str );
+        throw Exception( "Invalid integer", str );
     }
 
     return ret;

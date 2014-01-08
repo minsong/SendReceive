@@ -21,6 +21,9 @@ private:
 
     Address local_addr_, peer_addr_;
 
+    void getsockopt( const int level, const int optname,
+                     void *optval, socklen_t *optlen ) const;
+
 public:
     Socket( const SocketType & socket_type );
 
@@ -35,12 +38,17 @@ public:
     const Address & peer_addr( void ) const { return peer_addr_; }
 
     std::string read( void );
+    std::string read ( const size_t limit );
     void write( const std::string & str );
+    std::string::const_iterator write_some( const std::string::const_iterator & begin,
+                                            const std::string::const_iterator & end );
 
-    int raw_fd( void ) { return fd_.num(); }
+    FileDescriptor & fd( void ) { return fd_; }
 
     std::pair< Address, std::string > recvfrom( void );
     void sendto( const Address & destination, const std::string & payload );
+
+    Address original_dest( void ) const;
 
     /* Send packet */
     void send( Packet & packet );

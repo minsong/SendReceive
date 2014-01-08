@@ -46,7 +46,7 @@ string Packet::str( void ) const
 void Packet::set_timestamp( void ) 
 {
   /* Fill in send timestamp */
-  send_timestamp_ = Integer64( Network::timestamp() ); 
+  send_timestamp_ = Integer64( timestamp() ); 
 }
 
 
