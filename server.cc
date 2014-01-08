@@ -10,11 +10,11 @@
 
 using namespace std;
 
-Server::Server( const uint16_t portNumber )
-  : port( portNumber ), addr( "0.0.0.0", portNumber ), sock( UDP )
+Server::Server( const string local_service )
+  : addr( "0", local_service, UDP ), sock( UDP )
 {
   sock.bind( addr );
-  cout << "Server port number: " << port << endl;
+  cout << "Server port number: " << addr.port() << endl;
 }
 
 int Server::run( void ){
@@ -44,10 +44,9 @@ int main(int argc, char *argv[]) {
     }
     /* Check arguments */
     if ( argc != 2 ) {
-      throw Exception( argv[0], "LOCAL_PORT" );
-      return EXIT_FAILURE;
+      throw Exception( argv[0], "LOCAL_SERVICE" );
     }
-    Server svr( myatoi( argv[1] ) );
+    Server svr( argv[1] );
     return svr.run();
   } catch ( const Exception & e ) {
     e.perror();

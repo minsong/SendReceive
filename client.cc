@@ -7,14 +7,15 @@
 using namespace std;
 using namespace PollerShortNames;
 
-Client::Client( const string ipAddress, const uint16_t portNumber )
-  : port( portNumber ), addr( ipAddress, portNumber ), sock( UDP )
+Client::Client( const string dest_address, const string dest_service  )
+  : addr( dest_address, dest_service, UDP ), sock( UDP )
 {
   cout << "-- New Client --" << endl;
 }
 
 int Client::run( void ){  
 
+  /* Currently using fixed 1s intervals */
   const int interval_ms = 1000;
 
   /* Keep track of last time we sent an outgoing datagram */
@@ -43,6 +44,7 @@ int Client::run( void ){
 				     } ) );
 
   while ( true ) {
+    /* Currently using fixed 10s timeout */
     uint64_t timeout = 10000;
 
     /* Send packets every interval up to available window size */
@@ -71,7 +73,7 @@ int Client::run( void ){
     auto poll_result = poller.poll( timeout );
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
-      cout << "--Timed out--" << endl;
+      cout << "Timed out." << endl;
       base = next_seqnum;
     }
     else if ( poll_result.result == Poller::Result::Type::Exit ) {
@@ -92,10 +94,9 @@ int main( int argc, char *argv[] ) {
     }
     /* Check arguments */
     if ( argc != 3 ){
-      throw Exception( argv[0] , "DEST_ADDRESS DEST_PORT" );
-      return EXIT_FAILURE;
+      throw Exception( argv[0] , "DEST_ADDRESS DEST_SERVICE" );
     }
-    Client clt( argv[1], myatoi( argv[2] ) );
+    Client clt( argv[1], argv[2] );
     return clt.run();
   } catch ( const Exception & e ) {
     e.perror();
