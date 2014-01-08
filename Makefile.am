@@ -12,6 +12,6 @@ client_SOURCES = exception.hh ezio.cc ezio.hh \
 	socket.cc socket.hh address.cc address.hh \
 	socket_type.hh client.cc client.hh \
 	packet.cc packet.hh int64.cc int64.hh \
-	timestamp.cc timestamp.hh
+	timestamp.cc timestamp.hh poller.cc poller.hh
 client_LDADD = -lrt
 client_LDFLAGS = -pthread

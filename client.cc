@@ -1,9 +1,8 @@
 #include <iostream>
 
-#include "socket.hh"
 #include "client.hh"
-#include "packet.hh"
 #include "poller.hh"
+#include "timestamp.hh"
 
 using namespace std;
 using namespace PollerShortNames;
@@ -14,40 +13,75 @@ Client::Client( const string ipAddress, const uint16_t portNumber )
   cout << "-- New Client --" << endl;
 }
 
-void Client::run( void ){  
-  /* Set up the events that we care about */
-  Poller poller;
+int Client::run( void ){  
+
+  const int interval_ms = 1000;
+
+  /* Keep track of last time we sent an outgoing datagram */
+  uint64_t last_datagram_sent_ms = timestamp();
 
   uint16_t cwnd = 5;
   uint16_t base = 0;
   uint16_t next_seqnum = 0; 
 
+ /* Set up the events that we care about */
+  Poller poller;
+
+  /*Receive a packet */
+  poller.add_action( Poller::Action( sock.fd(),
+				     Direction::In,
+				     [&] () {
+				       const auto received_packet = sock.recv();
+				       cout << "Received '" << received_packet.payload();
+				       cout << "' with acknum " << received_packet.ack_number();
+				       cout << " at time " << timestamp();
+				       cout << " from " << received_packet.addr().str() << endl;
+
+				       base = received_packet.ack_number();
+
+				       return ResultType::Continue;
+				     } ) );
+
   while ( true ) {
-    //send_packet.set_timestamp();
-    //sock.sendto( send_packet.addr(), send_packet.str() );
+    uint64_t timeout = 10000;
 
-    cout << "--Base is " << base << "--" << endl;
-
-    /* Send packets up to available window size */
+    /* Send packets every interval up to available window size */
     while ( next_seqnum < base + cwnd ) {
-      Packet send_packet( addr , next_seqnum, 0, "Hello from Client" );
 
-      cout << "-- Sending Packet with seqnum " << next_seqnum << "--" << endl; 
-      sock.send( send_packet );
-      
-      next_seqnum++;
+      /* Are we due to send an outgoing packet right now? */
+      const uint64_t now = timestamp();
+      uint64_t next_packet_is_due = last_datagram_sent_ms + interval_ms;
+
+      if ( now >= next_packet_is_due ) {
+	/* Send a datagram */
+	Packet send_packet( addr , next_seqnum, 0, "Hello from Client" );
+	sock.send( send_packet );
+
+	cout << "Sent packet with seqnum " << send_packet.sequence_number();
+	cout << " at time " << send_packet.send_timestamp();
+	cout << " to " << send_packet.addr().str() << endl; 
+	
+	last_datagram_sent_ms = now;
+	next_packet_is_due = last_datagram_sent_ms + interval_ms;
+	next_seqnum++;
+      }
     }
 
+    /* Wait for an event, and run callback if one comes */
+    auto poll_result = poller.poll( timeout );
 
-    Packet received_packet = sock.recv();
-    cout << "Client received message '" << received_packet.payload();
-    cout << "' with acknum " << received_packet.ack_number();
-    cout << " from " << received_packet.addr().str() << endl;
-    
-    base = received_packet.ack_number();
+    if ( poll_result.result == Poller::Result::Type::Timeout ) {
+      cout << "--Timed out--" << endl;
+      base = next_seqnum;
+    }
+    else if ( poll_result.result == Poller::Result::Type::Exit ) {
+      /* An action wanted to quit or they all stopped being interested in their events */
+      cout << "Quitting after a file descriptor received an error." << endl;
+      return poll_result.exit_status;
+    }
+  }
 
-    usleep( 999999 );
-  } 
+  return EXIT_SUCCESS;
 }
 
 int main( int argc, char *argv[] ) {
@@ -62,11 +96,9 @@ int main( int argc, char *argv[] ) {
       return EXIT_FAILURE;
     }
     Client clt( argv[1], myatoi( argv[2] ) );
-    clt.run();
+    return clt.run();
   } catch ( const Exception & e ) {
     e.perror();
     return EXIT_FAILURE;
   }
-
-  return EXIT_SUCCESS;
 }

@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([alfredo], [0.1], [minsong@mit.edu])
+AC_INIT([client], [0.1], [minsong@mit.edu])
 AM_INIT_AUTOMAKE([foreign])
-AC_CONFIG_SRCDIR([receiver.cc])
+AC_CONFIG_SRCDIR([client.cc])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -26,7 +26,8 @@ AC_DEFINE_UNQUOTED([IPTABLES], ["$IPTABLES"], [path to iptables])
 # Checks for library functions.
 
 # Add picky CXXFLAGS
-PICKY_CXXFLAGS="-std=c++0x -pedantic -Wall -Wextra -Weffc++ -Werror"
+PICKY_CXXFLAGS="-std=c++0x -pedantic -Wall -Wextra -Weffc++ -Werror -fno-default-inline -Wno-unused-function"
+
 AC_SUBST([PICKY_CXXFLAGS])
 
 AC_CONFIG_FILES([Makefile])

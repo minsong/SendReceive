@@ -8,8 +8,6 @@
 #include "server.hh"
 #include "packet.hh"
 
-const int BUFSIZE = 1024;
-
 using namespace std;
 
 Server::Server( const uint16_t portNumber )
@@ -19,18 +17,23 @@ Server::Server( const uint16_t portNumber )
   cout << "Server port number: " << port << endl;
 }
 
-void Server::run( void ){
+int Server::run( void ){
   while ( true ) {
     Packet received_packet = sock.recv();
     
-    cout << "Server received message '" << received_packet.payload();
+    cout << "Server received '" << received_packet.payload();
     cout << "' with seqnum " << received_packet.sequence_number();
     cout << " sent at " << received_packet.send_timestamp();
     cout << " from " << received_packet.addr().str() << endl;
     
-    Packet send_packet( received_packet.addr(), 0 , received_packet.sequence_number()+1, "ACK" );
+    uint16_t acknum = received_packet.sequence_number()+1; 
+    Packet send_packet( received_packet.addr(), 0 , acknum, "ACK" );
     sock.send( send_packet );
+    cout << "Sent packet with acknum " << send_packet.ack_number();
+    cout << " at time " << send_packet.send_timestamp() << " To " << send_packet.addr().str() << endl; 
   } 
+
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char *argv[]) {
@@ -45,7 +48,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     Server svr( myatoi( argv[1] ) );
-    svr.run();
+    return svr.run();
   } catch ( const Exception & e ) {
     e.perror();
     return EXIT_FAILURE;

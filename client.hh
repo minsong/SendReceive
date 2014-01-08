@@ -3,11 +3,13 @@
 
 #include <cstring>
 
+#include "socket.hh"
+
 class Client
 {
 public:
   Client( const std::string ipAddress, const uint16_t portNumber );
-  void run( void );
+  int run( void );
   
 private:
   uint16_t port;

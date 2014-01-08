@@ -5,7 +5,7 @@ class Server
 {
 public:
   Server( const uint16_t portNumber );
-  void run( void );
+  int run( void );
   
 private:
   uint16_t port;
