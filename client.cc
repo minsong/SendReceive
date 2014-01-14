@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 
 #include "client.hh"
 #include "poller.hh"
@@ -21,7 +22,8 @@ int Client::run( void ){
   /* Keep track of last time we sent an outgoing datagram */
   uint64_t last_datagram_sent_ms = timestamp();
 
-  uint16_t cwnd = 5;
+  uint16_t cwnd = 1;
+  //uint16_t ssthresh = numeric_limits<int>::max();
   uint16_t base = 0;
   uint16_t next_seqnum = 0; 
 
@@ -37,7 +39,8 @@ int Client::run( void ){
 				       cout << "' with acknum " << received_packet.ack_number();
 				       cout << " at time " << timestamp();
 				       cout << " from " << received_packet.addr().str() << endl;
-
+				       
+				       cwnd++;
 				       base = received_packet.ack_number();
 
 				       return ResultType::Continue;
@@ -74,6 +77,8 @@ int Client::run( void ){
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
       cout << "Timed out." << endl;
+      //ssthresh = max( 2, cwnd/2 );
+      cwnd = 1;
       base = next_seqnum;
     }
     else if ( poll_result.result == Poller::Result::Type::Exit ) {
