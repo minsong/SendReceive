@@ -23,7 +23,8 @@ int Client::run( void ){
   uint64_t last_datagram_sent_ms = timestamp();
 
   uint16_t cwnd = 1;
-  //uint16_t ssthresh = numeric_limits<int>::max();
+  uint16_t ca_incr = 0;
+  uint16_t ssthresh = numeric_limits<int>::max();
   uint16_t base = 0;
   uint16_t next_seqnum = 0; 
 
@@ -40,9 +41,23 @@ int Client::run( void ){
 				       cout << " at time " << timestamp();
 				       cout << " from " << received_packet.addr().str() << endl;
 				       
-				       cwnd++;
-				       base = received_packet.ack_number();
+				       /* Slow start */ 
+				       if (cwnd < ssthresh){
+					 cwnd++;
+					 //cout << "Slow start-> incremented cwnd: " << cwnd << endl;
+				       }
+				       /* Congestion avoidance: cwnd >= ssthresh */
+				       else {
+					 /* Count up to cwnd, then increment cwnd */
+					 if ( ++ca_incr % cwnd  == 0 ){
+					   cwnd++;
+					   ca_incr = 0;
+					   //cout << "Congestion avoidance-> incremented cwnd: " << cwnd << endl;
+					 }
+				       }
 
+				       base = received_packet.ack_number();
+				       
 				       return ResultType::Continue;
 				     } ) );
 
@@ -77,9 +92,14 @@ int Client::run( void ){
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
       cout << "Timed out." << endl;
-      //ssthresh = max( 2, cwnd/2 );
+      //cout << "Cwnd was: " << cwnd << endl;
+      ssthresh = max( 2, cwnd/2 );
       cwnd = 1;
+      //cout << "Sshthresh now: " << ssthresh << endl;
+
+      /* On loss, just send next packet */
       base = next_seqnum;
+
     }
     else if ( poll_result.result == Poller::Result::Type::Exit ) {
       /* An action wanted to quit or they all stopped being interested in their events */
