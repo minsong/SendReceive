@@ -161,7 +161,7 @@ Address Socket::original_dest( void ) const
 /* Send packet */
 void Socket::send( Packet & packet )
 {
-    packet.set_timestamp();
+    packet.set_send_timestamp();
     string payload( packet.str() );
     
     ssize_t bytes_sent = ::sendto( fd_.num(), payload.data(),
