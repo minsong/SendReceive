@@ -7,6 +7,7 @@
 #include "socket.hh"
 #include "server.hh"
 #include "packet.hh"
+#include "timestamp.hh"
 
 using namespace std;
 
@@ -20,16 +21,23 @@ Server::Server( const string local_service )
 int Server::run( void ){
   while ( true ) {
     Packet received_packet = sock.recv();
-    
+ 
     cout << "Server received '" << received_packet.payload();
     cout << "' with seqnum " << received_packet.sequence_number();
+    cout << " at " << timestamp();
     cout << " sent at " << received_packet.send_timestamp();
     cout << " from " << received_packet.addr().str() << endl;
     
-    uint16_t acknum = received_packet.sequence_number()+1; 
+    /* Used for testing RTT samples */
+    usleep(750000);
+    usleep(750000);
+    
+    uint16_t acknum = received_packet.sequence_number()+1;
     Packet send_packet( received_packet.addr(), 0 , acknum, "ACK" );
+    send_packet.set_echo_reply_timestamp( received_packet.send_timestamp() );
     sock.send( send_packet );
     cout << "Sent packet with acknum " << send_packet.ack_number();
+    //cout << " with echoed timestamp " << send_packet.echo_reply_timestamp();
     cout << " at time " << send_packet.send_timestamp() << " To " << send_packet.addr().str() << endl; 
   } 
 

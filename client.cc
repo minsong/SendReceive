@@ -8,6 +8,8 @@
 using namespace std;
 using namespace PollerShortNames;
 
+const uint64_t K = 4;
+
 Client::Client( const string dest_address, const string dest_service  )
   : addr( dest_address, dest_service, UDP ), sock( UDP )
 {
@@ -22,11 +24,16 @@ int Client::run( void ){
   /* Keep track of last time we sent an outgoing datagram */
   uint64_t last_datagram_sent_ms = timestamp();
 
-  uint16_t cwnd = 1;
-  uint16_t ca_incr = 0;
-  uint16_t ssthresh = numeric_limits<int>::max();
-  uint16_t base = 0;
-  uint16_t next_seqnum = 0; 
+  uint64_t ssthresh = numeric_limits<int>::max();
+  uint64_t cwnd = 1;
+  uint64_t ca_incr = 0; 
+  uint64_t base = 0;
+  uint64_t next_seqnum = 0; 
+
+  /* Initial RTO = 1 second  */
+  uint64_t rto = 1000;
+  uint64_t r, srtt, rttvar;
+  
 
  /* Set up the events that we care about */
   Poller poller;
@@ -36,9 +43,33 @@ int Client::run( void ){
 				     Direction::In,
 				     [&] () {
 				       const auto received_packet = sock.recv();
+				       
+				       /* Get sample round trip time */
+				       const auto received_time = timestamp();
+				       r = received_time - received_packet.echo_reply_timestamp();
+				       //cout << "Received Time: " << received_time << endl;
+				       //cout << "RTT sample: " << r << endl;
+
+				       /* Get smoothed round trip time estimate and variance */
+				       if ( !(srtt) ) {
+					 srtt = r;
+					 rttvar = r/2;
+				       }
+				       else {
+					 uint64_t delta = srtt > r ? srtt-r : r-srtt;
+					 rttvar = (0.75)*rttvar + 0.25*delta;
+					 srtt = (0.875)*srtt + 0.125*r;
+				       }
+				     
+				       /* Get retransmission timeout */
+				       // TODO Clock granularity: rto = srtt + max( G, K*rttvar ); 
+				       rto = max( srtt + K*rttvar, ( uint64_t ) 1000 );
+				       //cout << "SRTT: " << srtt << " RTTVAR: " << rttvar << endl;
+				       //cout << "RTO: " << rto << endl;
+					 
 				       cout << "Received '" << received_packet.payload();
 				       cout << "' with acknum " << received_packet.ack_number();
-				       cout << " at time " << timestamp();
+				       cout << " at time " << received_time;
 				       cout << " from " << received_packet.addr().str() << endl;
 				       
 				       /* Slow start */ 
@@ -62,9 +93,6 @@ int Client::run( void ){
 				     } ) );
 
   while ( true ) {
-    /* Currently using fixed 10s timeout */
-    uint64_t timeout = 10000;
-
     /* Send packets every interval up to available window size */
     while ( next_seqnum < base + cwnd ) {
 
@@ -88,12 +116,12 @@ int Client::run( void ){
     }
 
     /* Wait for an event, and run callback if one comes */
-    auto poll_result = poller.poll( timeout );
+    auto poll_result = poller.poll( rto );
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
       cout << "Timed out." << endl;
       //cout << "Cwnd was: " << cwnd << endl;
-      ssthresh = max( 2, cwnd/2 );
+      ssthresh = max( ( uint64_t ) 2, cwnd/2 );
       cwnd = 1;
       //cout << "Sshthresh now: " << ssthresh << endl;
 
