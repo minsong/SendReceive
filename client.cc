@@ -32,7 +32,7 @@ int Client::run( void ){
 
   /* Initial RTO = 1 second  */
   uint64_t rto = 1000;
-  uint64_t r, srtt, rttvar;
+  uint64_t srtt, rttvar;
   
 
  /* Set up the events that we care about */
@@ -44,50 +44,13 @@ int Client::run( void ){
 				     [&] () {
 				       const auto received_packet = sock.recv();
 				       
-				       /* Get sample round trip time */
-				       const auto received_time = timestamp();
-				       r = received_time - received_packet.echo_reply_timestamp();
-				       //cout << "Received Time: " << received_time << endl;
-				       //cout << "RTT sample: " << r << endl;
+				       update_timeout( received_packet, srtt, rttvar, rto );
+				       update_window_size( ssthresh, ca_incr, cwnd );
+				       base = received_packet.ack_number();
 
-				       /* Get smoothed round trip time estimate and variance */
-				       if ( !(srtt) ) {
-					 srtt = r;
-					 rttvar = r/2;
-				       }
-				       else {
-					 uint64_t delta = srtt > r ? srtt-r : r-srtt;
-					 rttvar = (0.75)*rttvar + 0.25*delta;
-					 srtt = (0.875)*srtt + 0.125*r;
-				       }
-				     
-				       /* Get retransmission timeout */
-				       // TODO Clock granularity: rto = srtt + max( G, K*rttvar ); 
-				       rto = max( srtt + K*rttvar, ( uint64_t ) 1000 );
-				       //cout << "SRTT: " << srtt << " RTTVAR: " << rttvar << endl;
-				       //cout << "RTO: " << rto << endl;
-					 
 				       cout << "Received '" << received_packet.payload();
 				       cout << "' with acknum " << received_packet.ack_number();
-				       cout << " at time " << received_time;
 				       cout << " from " << received_packet.addr().str() << endl;
-				       
-				       /* Slow start */ 
-				       if (cwnd < ssthresh){
-					 cwnd++;
-					 //cout << "Slow start-> incremented cwnd: " << cwnd << endl;
-				       }
-				       /* Congestion avoidance: cwnd >= ssthresh */
-				       else {
-					 /* Count up to cwnd, then increment cwnd */
-					 if ( ++ca_incr % cwnd  == 0 ){
-					   cwnd++;
-					   ca_incr = 0;
-					   //cout << "Congestion avoidance-> incremented cwnd: " << cwnd << endl;
-					 }
-				       }
-
-				       base = received_packet.ack_number();
 				       
 				       return ResultType::Continue;
 				     } ) );
@@ -123,7 +86,6 @@ int Client::run( void ){
       //cout << "Cwnd was: " << cwnd << endl;
       ssthresh = max( ( uint64_t ) 2, cwnd/2 );
       cwnd = 1;
-      //cout << "Sshthresh now: " << ssthresh << endl;
 
       /* On loss, just send next packet */
       base = next_seqnum;
@@ -137,6 +99,48 @@ int Client::run( void ){
   }
 
   return EXIT_SUCCESS;
+}
+
+void Client::update_timeout( const Packet &received_packet, uint64_t &srtt, uint64_t &rttvar, uint64_t &rto ){
+  /* Get sample round trip time */
+  const uint64_t received_time = timestamp();
+  const uint64_t r = received_time - received_packet.echo_reply_timestamp();
+  //cout << "Received Time: " << received_time << endl;
+  //cout << "RTT sample: " << r << endl;
+
+  /* Get smoothed round trip time estimate and variance */
+  if ( !(srtt) ) {
+    srtt = r;
+    rttvar = r/2;
+  }
+  else {
+    const uint64_t delta = srtt > r ? srtt-r : r-srtt;
+    rttvar = (0.75)*rttvar + 0.25*delta;
+    srtt = (0.875)*srtt + 0.125*r;
+  }
+
+  /* Get retransmission timeout */
+  // TODO Clock granularity: rto = srtt + max( G, K*rttvar ); 
+  rto = max( srtt + K*rttvar, ( uint64_t ) 1000 );
+  //cout << "SRTT: " << srtt << " RTTVAR: " << rttvar << endl;
+  //cout << "RTO: " << rto << endl;
+}
+
+void Client::update_window_size( const uint64_t ssthresh, uint64_t &ca_incr, uint64_t &cwnd ){
+  /* Slow start */ 
+  if (cwnd < ssthresh){
+    cwnd++;
+    cout << "Slow start-> incremented cwnd: " << cwnd << endl;
+  }
+  /* Congestion avoidance: cwnd >= ssthresh */
+  else {
+    /* Count up to cwnd, then increment cwnd */
+    if ( ++ca_incr % cwnd  == 0 ){
+      cwnd++;
+      ca_incr = 0;
+      cout << "Congestion avoidance-> incremented cwnd: " << cwnd << endl;
+    }
+  }
 }
 
 int main( int argc, char *argv[] ) {
