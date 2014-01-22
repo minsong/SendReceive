@@ -33,7 +33,7 @@ int Server::run( void ){
     usleep(750000);
     
     uint16_t acknum = received_packet.sequence_number()+1;
-    Packet send_packet( received_packet.addr(), 0 , acknum, "ACK" );
+    Packet send_packet( received_packet.addr(), 0, 0 , acknum, "ACK" );
     send_packet.set_echo_reply_timestamp( received_packet.send_timestamp() );
     sock.send( send_packet );
     cout << "Sent packet with acknum " << send_packet.ack_number();

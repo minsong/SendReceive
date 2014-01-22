@@ -13,10 +13,10 @@ server_SOURCES = $(common_source) server.cc server.hh
 server_LDADD = -lrt
 server_LDFLAGS = -pthread
 client_SOURCES = $(common_source) client.cc client.hh 		\
-	poller.cc poller.hh # rat.cc rat.hh rat-templates.cc 	\
-	# ../protobufs.dna.pb.h memory.cc memory.hh 		\
-	# memoryrange.cc memoryrange.hh rat.cc rat.hh		\
-	# whisker.cc whisker.hh whiskertree.cc whiskertree.hh 	\
-	# configrange.hh configrange.cc
+	poller.cc poller.hh  memory.cc memory.hh 		\
+	memoryrange.cc memoryrange.hh ../protobufs.dna.pb.h	\
+	whisker.cc whisker.hh whiskertree.cc whiskertree.hh	\
+	configrange.hh configrange.cc
+        # rat.cc rat.hh rat-templates.cc 			\
 client_LDADD = -lrt
 client_LDFLAGS = -pthread

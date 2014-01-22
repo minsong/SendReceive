@@ -4,6 +4,7 @@
 #include "client.hh"
 #include "poller.hh"
 #include "timestamp.hh"
+#include "memory.hh" 
 
 using namespace std;
 using namespace PollerShortNames;
@@ -68,8 +69,10 @@ int Client::run( void ){
 
       if ( now >= next_packet_is_due ) {
 	/* Send a datagram */
-	Packet send_packet( addr , next_seqnum, 0, "Hello from Client" );
+	Packet send_packet( addr , 0, next_seqnum, 0, "Hello from Client" );
 	sock.send( send_packet );
+
+	/* Need to update memory here */
 
 	cout << "Sent packet with seqnum " << send_packet.sequence_number();
 	cout << " at time " << send_packet.send_timestamp();

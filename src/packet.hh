@@ -9,7 +9,7 @@
 /* Packet class */
 class Packet {
 public:
-  Packet( const Address & addr, const uint64_t sequence_number, const uint64_t ack_number, const std::string payload );
+  Packet( const Address & addr, const uint64_t flow_id, const uint64_t sequence_number, const uint64_t ack_number, const std::string payload );
   
   Packet( const Address & addr, const std::string & str );
   
@@ -18,6 +18,7 @@ public:
   void set_echo_reply_timestamp( uint64_t echo_timestamp );  
     
   const Address & addr( void ) const { return addr_; }
+  uint64_t flow_id( void ) const { return flow_id_.int64(); }
   uint64_t sequence_number( void ) const { return sequence_number_.int64(); }
   uint64_t ack_number( void ) const { return ack_number_.int64(); }
   uint64_t send_timestamp( void ) const { return send_timestamp_.int64(); }
@@ -27,6 +28,7 @@ public:
   
 private:
   Address addr_;
+  Integer64 flow_id_;
   Integer64 sequence_number_;
   Integer64 ack_number_;
   Integer64 send_timestamp_;
