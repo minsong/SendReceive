@@ -10,6 +10,30 @@ using namespace std;
 static const double alpha = 1.0 / 8.0;
 static const double slow_alpha = 1.0 / 256.0;
 
+void Memory::packet_received( const Packet & packet, const unsigned int flow_id )
+{
+  if ( packet.flow_id() == flow_id ) {
+    const double received_time = ( double ) timestamp();
+    const double rtt = received_time - ( double ) packet.echo_reply_timestamp();
+    if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
+      _last_tick_sent = packet.echo_reply_timestamp();
+      _last_tick_received = received_time;
+      _min_rtt = rtt;
+    } else {
+      _rec_send_ewma = (1 - alpha) * _rec_send_ewma + alpha * (packet.echo_reply_timestamp() - _last_tick_sent);
+      _rec_rec_ewma = (1 - alpha) * _rec_rec_ewma + alpha * (received_time - _last_tick_received);
+      _slow_rec_rec_ewma = (1 - slow_alpha) * _slow_rec_rec_ewma + slow_alpha * (received_time - _last_tick_received);
+
+      _last_tick_sent = packet.echo_reply_timestamp();
+      _last_tick_received = received_time;
+
+      _min_rtt = min( _min_rtt, rtt );
+      _rtt_ratio = double( rtt ) / double( _min_rtt );
+      assert( _rtt_ratio >= 1.0 );
+    }
+  }
+}
+
 void Memory::packets_received( const vector< Packet > & packets, const unsigned int flow_id )
 {
   for ( const auto &x : packets ) {
@@ -17,7 +41,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       continue;
     }
 
-    const double received_time = timestamp();
+    const double received_time = ( double ) timestamp();
     const double rtt = received_time - ( double ) x.echo_reply_timestamp();
     if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
       _last_tick_sent = x.echo_reply_timestamp();

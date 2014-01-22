@@ -50,6 +50,7 @@ public:
   DataType & mutable_field( unsigned int num )     { return num == 0 ? _rec_send_ewma : num == 1 ? _rec_rec_ewma : num == 2 ? _rtt_ratio : _slow_rec_rec_ewma ; }
 
   void packet_sent( const Packet & packet __attribute((unused)) ) {}
+  void packet_received( const Packet & packet, const unsigned int flow_id );
   void packets_received( const std::vector< Packet > & packets, const unsigned int flow_id );
   void advance_to( const unsigned int tickno __attribute((unused)) ) {}
 
