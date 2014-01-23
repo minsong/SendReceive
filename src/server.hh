@@ -6,12 +6,12 @@
 class Server
 {
 public:
-  Server( const std::string local_service );
+  Server( const std::string s_local_service );
   int run( void );
   
 private:
-  Address addr;
-  Socket sock;
+  Address _addr;
+  Socket _sock;
 };
 
 #endif /* SERVER_HH_ */
