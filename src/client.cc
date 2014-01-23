@@ -95,27 +95,28 @@ uint64_t Client::next_event_time( const uint64_t &last_datagram_sent, const uint
 
 int main( int argc, char *argv[] ) {
   try { 
-    /* Truly paranoid check */
     if ( argc <= 0 ) {
       throw Exception( "client", "Missing argv[ 0 ]" );
     }
-    /* Check arguments */
     if ( argc != 4 ){
-      throw Exception( argv[0] , "FILENAME DEST_ADDRESS DEST_SERVICE" );
+      throw Exception( argv[ 0 ] , "DEST_ADDRESS DEST_SERVICE FILENAME" );
     }
+
     WhiskerTree whiskers;
-    string filename( argv[ 1 ] );
+    string filename( argv[ 3 ] );
     int fd = open( filename.c_str(), O_RDONLY );
     if ( fd < 0 ) {
-      throw Exception( argv[0], "Could not open file" );
+      throw Exception( argv[ 0 ], "Could not open file" );
     }
     RemyBuffers::WhiskerTree tree;
     if ( !tree.ParseFromFileDescriptor( fd ) ) {
-      throw Exception( argv[0], "Could not parse" );
+      throw Exception( argv[ 0 ], "Could not parse file" );
     }
     whiskers = WhiskerTree( tree );
-    Client clt( whiskers, argv[2], argv[3] );
+
+    Client clt( argv[ 1 ], argv[ 2 ], whiskers );
     return clt.run();
+
   } catch ( const Exception & e ) {
     e.perror();
     return EXIT_FAILURE;
