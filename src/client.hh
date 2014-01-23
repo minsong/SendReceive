@@ -20,6 +20,8 @@ private:
   Memory _memory;
   bool _track;
 
+
+  void set_window_intersend( uint64_t &the_window, uint64_t &intersend_time );
   void packet_received( const Packet &packet, const uint64_t &flow_id, uint64_t &largest_ack, uint64_t &the_window, uint64_t &intersend_time );
   uint64_t next_event_time( const uint64_t &last_datagram_sent, const uint64_t &intersend_time ) const;
 };

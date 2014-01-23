@@ -23,9 +23,7 @@ int Client::run( void ){
   uint64_t last_datagram_sent = 0, largest_ack = 0, the_window = 0, intersend_time = 0,  next_seqnum = 0, flow_id = 0;
 
   /* initial window and intersend time */
-  const Whisker & current_whisker( _whiskers.use_whisker( _memory, _track ) );
-  the_window = current_whisker.window( the_window );
-  intersend_time = current_whisker.intersend();
+  set_window_intersend( the_window, intersend_time );
 
   Poller poller;
   poller.add_action( Poller::Action( _sock.fd(),
@@ -77,15 +75,18 @@ int Client::run( void ){
   return EXIT_SUCCESS;
 }
 
+void Client::set_window_intersend( uint64_t &the_window, uint64_t &intersend_time ) {
+  const Whisker & current_whisker( _whiskers.use_whisker( _memory, _track ) );
+  the_window = current_whisker.window( the_window );
+  intersend_time = current_whisker.intersend();
+}
+
 void Client::packet_received( const Packet &packet, const uint64_t &flow_id, uint64_t &largest_ack, uint64_t &the_window, uint64_t &intersend_time ) {
   /* Assumption: There is no reordering */
   largest_ack = max( packet.sequence_number(), largest_ack );
   _memory.packet_received( packet, flow_id );
   
-  const Whisker & current_whisker( _whiskers.use_whisker( _memory, _track ) );
-  
-  the_window = current_whisker.window( the_window );
-  intersend_time = current_whisker.intersend();
+  set_window_intersend( the_window, intersend_time );
 }
 
 uint64_t Client::next_event_time( const uint64_t &last_datagram_sent, const uint64_t &intersend_time ) const 
