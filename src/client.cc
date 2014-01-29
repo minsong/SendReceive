@@ -8,8 +8,11 @@
 using namespace std;
 using namespace PollerShortNames;
 
-Client::Client( const string s_dest_address, const string s_dest_service, WhiskerTree & s_whiskers,  const bool s_track )
-  : _addr( s_dest_address, s_dest_service, UDP ), 
+Client::Client( const string s_dest_address, 
+		const string s_dest_service, 
+		WhiskerTree & s_whiskers, 
+		const bool s_track )
+  : _addr( s_dest_address, s_dest_service, UDP ),
     _sock( UDP ),
     _whiskers( s_whiskers ),
     _memory(),
@@ -18,9 +21,9 @@ Client::Client( const string s_dest_address, const string s_dest_service, Whiske
   cout << "-- New Client --" << endl;
 }
 
-int Client::run( void ){  
+int Client::run( void ){
 
-  uint64_t last_datagram_sent = 0, largest_ack = 0, the_window = 0, intersend_time = 0,  next_seqnum = 0, flow_id = 0;
+  uint64_t last_packet_sent = 0, largest_ack = 0, the_window = 0, intersend_time = 0,  next_seqnum = 0, flow_id = 0;
 
   /* initial window and intersend time */
   set_window_intersend( the_window, intersend_time );
@@ -44,7 +47,7 @@ int Client::run( void ){
     while ( next_seqnum < largest_ack + the_window ) {
       
       const uint64_t now = timestamp();
-      if ( now >= next_event_time( last_datagram_sent, intersend_time ) ) {
+      if ( now >= next_event_time( last_packet_sent, intersend_time ) ) {
 	//TODO: flow_id set?
 	Packet send_packet( _addr , 0, next_seqnum, 0, "Hello from Client" );
 	_sock.send( send_packet );
@@ -52,9 +55,9 @@ int Client::run( void ){
 
 	cout << "Sent packet with seqnum " << send_packet.sequence_number();
 	cout << " at time " << send_packet.send_timestamp();
-	cout << " to " << send_packet.addr().str() << endl; 
+	cout << " to " << send_packet.addr().str() << endl;
 	
-	last_datagram_sent = now;
+	last_packet_sent = now;
 	next_seqnum++;
       }
     }
@@ -89,9 +92,9 @@ void Client::packet_received( const Packet &packet, const uint64_t &flow_id, uin
   set_window_intersend( the_window, intersend_time );
 }
 
-uint64_t Client::next_event_time( const uint64_t &last_datagram_sent, const uint64_t &intersend_time ) const 
+uint64_t Client::next_event_time( const uint64_t &last_packet_sent, const uint64_t &intersend_time ) const 
 {
-  return last_datagram_sent + intersend_time;
+  return last_packet_sent + intersend_time;
 }
 
 int main( int argc, char *argv[] ) {
