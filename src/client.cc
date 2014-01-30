@@ -8,6 +8,10 @@
 using namespace std;
 using namespace PollerShortNames;
 
+static const uint64_t K = 4.0;
+static const double alpha = 1.0/8.0;
+static const double beta = 1.0/4.0;
+
 Client::Client( const string s_dest_address, 
 		const string s_dest_service, 
 		WhiskerTree & s_whiskers, 
@@ -28,12 +32,17 @@ int Client::run( void ){
   /* initial window and intersend time */
   set_window_intersend( the_window, intersend_time );
 
+  /* Initial RTO = 1 second  */
+  uint64_t rto = 1000;
+  uint64_t srtt = 0, rttvar = 0;
+
   Poller poller;
   poller.add_action( Poller::Action( _sock.fd(),
 				     Direction::In,
 				     [&] () {
 				       const auto received_packet = _sock.recv();
 				       packet_received( received_packet, flow_id, largest_ack, the_window, intersend_time ); 
+				       update_timeout( received_packet, srtt, rttvar, rto );
 
 				       cout << "Received '" << received_packet.payload();
 				       cout << "' with acknum " << received_packet.ack_number();
@@ -61,13 +70,11 @@ int Client::run( void ){
 	next_seqnum++;
       }
     }
-    //TODO: How is timer set?
-    auto poll_result = poller.poll( 10000 );
+    auto poll_result = poller.poll( rto );
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
       cout << "Timed out." << endl;
       largest_ack = next_seqnum;
-      //TODO: Do anything else on timeout?
     }
     else if ( poll_result.result == Poller::Result::Type::Exit ) {
       cout << "Quitting after a file descriptor received an error." << endl;
@@ -90,6 +97,24 @@ void Client::packet_received( const Packet &packet, const uint64_t &flow_id, uin
   _memory.packet_received( packet, flow_id );
   
   set_window_intersend( the_window, intersend_time );
+}
+
+void Client::update_timeout( const Packet &received_packet, uint64_t &srtt, uint64_t &rttvar, uint64_t &rto ){
+  const uint64_t received_time = timestamp();
+  const uint64_t r = received_time - received_packet.echo_reply_timestamp();
+
+  if ( !(srtt) ) {
+    srtt = r;
+    rttvar = r/2;
+  }
+  else {
+    const uint64_t delta = srtt > r ? srtt-r : r-srtt;
+    rttvar = ( 1 - beta )*rttvar + beta*delta;
+    srtt = ( 1 - alpha )*srtt + alpha*r;
+  }
+
+  // TODO Clock granularity: rto = srtt + max( G, K*rttvar ); 
+  rto = max( srtt + K*rttvar, ( uint64_t ) 1000 );
 }
 
 uint64_t Client::next_event_time( const uint64_t &last_packet_sent, const uint64_t &intersend_time ) const 
