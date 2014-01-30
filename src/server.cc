@@ -12,7 +12,7 @@
 using namespace std;
 
 Server::Server( const string s_local_service )
-  : _addr( "0", s_local_service, UDP ), _sock( UDP )
+  : _addr( "0.0.0.0", s_local_service, UDP ), _sock( UDP )
 {
   _sock.bind( _addr );
   cout << "Server port number: " << _addr.port() << endl;
