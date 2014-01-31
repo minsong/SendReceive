@@ -10,8 +10,8 @@ using namespace std;
 using namespace PollerShortNames;
 
 static const uint64_t K = 4.0;
-static const double alpha = 1.0/8.0;
-static const double beta = 1.0/4.0;
+static const double alpha = 1.0 / 8.0;
+static const double beta = 1.0 / 4.0;
 
 Client::Client( const string s_dest_address, 
 		const string s_dest_service, 
@@ -156,7 +156,7 @@ int main( int argc, char *argv[] ) {
     whiskers = WhiskerTree( tree );
     
     Client clt( argv[ 1 ], argv[ 2 ], whiskers );
-    return clt.run(1000);
+    return clt.run( 1000 );
 
   } catch ( const Exception & e ) {
     e.perror();
