@@ -16,7 +16,6 @@ client_SOURCES = $(common_source) client.cc client.hh 		\
 	poller.cc poller.hh  memory.cc memory.hh 		\
 	memoryrange.cc memoryrange.hh ../protobufs.dna.pb.h	\
 	whisker.cc whisker.hh whiskertree.cc whiskertree.hh	\
-	configrange.hh configrange.cc
-        # rat.cc rat.hh rat-templates.cc 			\
+	configrange.hh configrange.cc utility.hh
 client_LDADD = -lrt
 client_LDFLAGS = -pthread

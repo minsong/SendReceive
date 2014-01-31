@@ -10,8 +10,8 @@
 class Client
 {
 public:
-  Client( const std::string s_dest_address, const std::string s_dest_service, WhiskerTree & s_whiskers, const bool s_track=false );
-  int run( void );
+  Client( const std::string s_dest_address, const std::string s_dest_service, WhiskerTree & s_whiskers, const bool s_track=true );
+  int run( const uint64_t num_total_packets );
   
 private:
   Address _addr;

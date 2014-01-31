@@ -4,6 +4,7 @@
 #include "client.hh"
 #include "poller.hh"
 #include "timestamp.hh" 
+#include "utility.hh"
 
 using namespace std;
 using namespace PollerShortNames;
@@ -25,9 +26,9 @@ Client::Client( const string s_dest_address,
   cout << "-- New Client --" << endl;
 }
 
-int Client::run( void ){
+int Client::run( const uint64_t num_total_packets ){
 
-  uint64_t last_packet_sent = 0, largest_ack = 0, the_window = 0, intersend_time = 0,  next_seqnum = 0, flow_id = 0;
+  uint64_t last_packet_sent = 0, largest_ack = 0, the_window = 0, intersend_time = 0,  next_seqnum = 0, flow_id = 1;
 
   /* initial window and intersend time */
   set_window_intersend( the_window, intersend_time );
@@ -36,6 +37,8 @@ int Client::run( void ){
   uint64_t rto = 1000;
   uint64_t srtt = 0, rttvar = 0;
 
+  Utility utility;
+
   Poller poller;
   poller.add_action( Poller::Action( _sock.fd(),
 				     Direction::In,
@@ -43,6 +46,7 @@ int Client::run( void ){
 				       const auto received_packet = _sock.recv();
 				       packet_received( received_packet, flow_id, largest_ack, the_window, intersend_time ); 
 				       update_timeout( received_packet, srtt, rttvar, rto );
+				       utility.packet_received( received_packet );
 
 				       cout << "Received '" << received_packet.payload();
 				       cout << "' with acknum " << received_packet.ack_number();
@@ -51,9 +55,12 @@ int Client::run( void ){
 				       return ResultType::Continue;
 				     } ) );
 
-  while ( true ) {
+  while ( next_seqnum < num_total_packets ) {
+
+    const uint64_t start_sending = timestamp();
+
     /* Send packets every interval up to available window size */
-    while ( next_seqnum < largest_ack + the_window ) {
+    while ( next_seqnum < num_total_packets and next_seqnum < largest_ack + the_window ) {
       
       const uint64_t now = timestamp();
       if ( now >= next_event_time( last_packet_sent, intersend_time ) ) {
@@ -70,6 +77,8 @@ int Client::run( void ){
 	next_seqnum++;
       }
     }
+    utility.sending_duration( timestamp() - start_sending );
+
     auto poll_result = poller.poll( rto );
 
     if ( poll_result.result == Poller::Result::Type::Timeout ) {
@@ -82,6 +91,9 @@ int Client::run( void ){
     }
   }
 
+  cout << "Avg throughput: " << utility.average_throughput() << endl;
+  cout << "Avg delay: " << utility.average_delay() << endl;
+  cout << "Avg utility: " << utility.utility() << endl;
   return EXIT_SUCCESS;
 }
 
@@ -142,9 +154,9 @@ int main( int argc, char *argv[] ) {
       throw Exception( argv[ 0 ], "Could not parse file" );
     }
     whiskers = WhiskerTree( tree );
-
+    
     Client clt( argv[ 1 ], argv[ 2 ], whiskers );
-    return clt.run();
+    return clt.run(1000);
 
   } catch ( const Exception & e ) {
     e.perror();
